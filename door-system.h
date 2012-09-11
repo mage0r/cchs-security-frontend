@@ -1,0 +1,10 @@
+#pragma once
+
+typedef enum {
+	CARDACTION_ALLOWED,
+	CARDACTION_BLOCKED,
+	CARDACTION_AUTHFAIL,
+	CARDACTION_INVALID
+} cardAction;
+
+

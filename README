@@ -1,0 +1,22 @@
+This is a prototype 'card reader' program intended for use in an access system for
+opening doors with NFC. 
+
+
+Requirements:
+- a NFC reader that works with libnfc
+- a MiFare Classic 1K card. 
+- libnfc and libfreefare
+- libcurl 
+- the accompanying 'backend/server' program
+
+Edit Makefile with the correct paths to the libnfc, libfreefare and libusb (if
+used by your reader). In the future I will move this to CMake.
+
+There are hooks in action.c for actions that take place when a valid or
+invalid card is presented. For now, this just involves sending either 
+'v' (valid) or 'i' (invalid) over the serial port, i.e to an Arduino
+that blinks a LED. 
+The intention is to have a modular interface so different ways of 
+triggering a door-latch mechanism can be used. 
+
+
