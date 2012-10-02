@@ -1,0 +1,13 @@
+
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+find_path(BCM2835_INCLUDE_DIR "bcm2835.h")
+#find_path(BCM2835_LIBRARY NAMES bcm2835 libbcm2835
+#	HINTS "/usr/local/lib")
+set(BCM2835_LIBRARY "libbcm2835.a")
+set(BCM2835_LIBRARIES ${BCM2835_LIBRARY})
+set(BCM2835_INCLUDE_DIRS ${BCM2835_INCLUDE_DIR})
+
+include(FindPackageHandleStandardArgs)
+
+find_package_handle_standard_args(BCM2835 DEFAULT_MSG
+	BCM2835_LIBRARY BCM2835_INCLUDE_DIR)

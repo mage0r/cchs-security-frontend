@@ -2,6 +2,7 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
+#include <string.h>
 #include <stdio.h>
 #include "crypto.h"
 
