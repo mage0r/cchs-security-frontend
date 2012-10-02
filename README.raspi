@@ -1,0 +1,3 @@
+The BCM 2835 library is needed to perform actions with the Raspberry Pi GPIOs. It can be obtained from:
+
+http://www.open.com.au/mikem/bcm2835/
