@@ -19,8 +19,8 @@ if (BCM2835_FOUND)
 	set(ACTIONS_INCLUDE ${BCM2835_INCLUDE_DIR})
 endif (BCM2835_FOUND)
 
-ADD_EXECUTABLE(door-system door-system.c backend-comms.c ${ACTIONS_FILE})
-ADD_EXECUTABLE(format-card format-card.cpp crypto.c)
+ADD_EXECUTABLE(door-system crypto.c door-system.c backend-comms.c ${ACTIONS_FILE})
+ADD_EXECUTABLE(format-card format-card.cpp backend-comms.c crypto.c)
 ADD_EXECUTABLE(test-crypto test-crypto.c crypto.c)
 
 include_directories("include" ${LIBNFC_INCLUDE} ${LIBFREEFARE_INCLUDE} ${CURL_INCLUDE_DIR} ${OpenSSL_INCLUDE_DIR} ${ACTIONS_INCLUDE})

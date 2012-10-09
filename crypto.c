@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include "crypto.h"
 
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
 #define SITE_SECRET "http://hackmelbourne.org"
 #define SITE_SECRET_LEN 24
 EVP_MD_CTX *mdctx;
@@ -36,6 +38,44 @@ unsigned char * get_random_bytes(size_t len) {
     return randbytes;
 }
 
+char * getBase64String(char *inbytes, size_t inLen) {
+	BIO *b64, *bmem;
+	b64 = BIO_new(BIO_f_base64());
+	bmem = BIO_new(BIO_s_mem());
+	bmem = BIO_push(b64, bmem);
+	BIO_write(bmem,inbytes,inLen);
+	BIO_flush(bmem);
+	BUF_MEM *bptr;
+	BIO_get_mem_ptr(bmem,&bptr);
+	size_t outputLen = bptr->length;
+	char *data = malloc(outputLen * sizeof(char)+1);
+	memcpy(data,bptr->data,outputLen);
+	data[outputLen] = NULL;
+	BIO_free_all(bmem);
+	BIO_free_all(b64);
+	return data;
+}
+
+char * decodeBase64String(char *inbytes, size_t inLen, char *storage, size_t maxOutLen) {
+	BIO *bmem, *b64;
+	//bmem = BIO_new(BIO_s_mem());
+	b64 = BIO_new(BIO_f_base64());
+	BIO_set_flags(b64,BIO_FLAGS_BASE64_NO_NL);
+	bmem = BIO_new_mem_buf(inbytes,inLen);
+	bmem = BIO_push(b64,bmem);
+	//BIO_write(bmem,inbytes,inLen);
+	//BIO_flush(bmem);
+	char *storptr = NULL;
+	if (storage) {
+		storptr = storage;
+	} else {
+		storptr = malloc(maxOutLen * sizeof(char) + 1);
+	} 
+	BIO_read(bmem,storptr,maxOutLen);
+	//storptr[maxOutLen+1] = '\0';
+	BIO_free_all(bmem);
+	return storptr;
+}
 /** 
   * Return the SHA-512 based hash.
   */

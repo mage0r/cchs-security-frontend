@@ -1,15 +1,16 @@
 #include "curl/curl.h"
 #include "settings.h"
 #include <string.h>
+#include <stdbool.h>
 #include "door-system.h"
 
 size_t write_response_data(void *buffer, size_t size, size_t nmemb, void *userp);
 
-void writeToAuditLog(char *uid, cardAction status) {
+void writeToAuditLog(char *uid, cardAction status, unsigned int counter) {
 	char log_url[128]; 
 	snprintf(log_url,128,AUDIT_LOG_URL,uid);
 	char postdata[64];
-	snprintf(postdata,64,"status=%d",status);
+	snprintf(postdata,64,"status=%d&counter=%u",status,counter);
 
 	CURL *curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, log_url);
@@ -19,11 +20,48 @@ void writeToAuditLog(char *uid, cardAction status) {
 	curl_easy_cleanup(curl);
 }
 
-cardAction checkIfCardIsValid(char *uid) {
+void setNewCounterValue(char *uid, unsigned int counter) {
+	char counter_url[128]; 
+	snprintf(counter_url,128,COUNTER_CHANGE_URL,uid);
+	char postdata[64];
+	snprintf(postdata,64,"counter=%u",counter);
+
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_URL, counter_url);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata);
+	CURLcode res = curl_easy_perform(curl);
+
+	curl_easy_cleanup(curl);
+}
+
+bool addCard(char *uid, char *b64KeyA, char *b64KeyB) {
+	bool opSuccess = true;
+	char add_url[128], postdata[64];
+	snprintf(add_url,128,ADD_CARD_URL,uid);
+
+	snprintf(postdata,64,"keyA=%s&keyB=%s",b64KeyA,b64KeyB);	
+
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_URL, add_url);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS,postdata);
+	CURLcode res = curl_easy_perform(curl);
+
+	long http_code = 0;
+	curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+	if (http_code != 200) {
+		opSuccess = false;
+	}
+	curl_easy_cleanup(curl);
+	return opSuccess;
+}
+
+cardAction checkIfCardIsValid(char *uid, char *inKeyAPtr, size_t *encodedKeyALen, unsigned int *counterState) {
 	char check_url[128];
 	snprintf(check_url,128,CARD_VALID_URL,uid);
 
 	char responsebuffer[2048];
+	memset(responsebuffer,0,2048);
 
 	CURL *curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, check_url);
@@ -32,23 +70,30 @@ cardAction checkIfCardIsValid(char *uid) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responsebuffer);
 
     CURLcode res = curl_easy_perform(curl);
-
+	cardAction response = CARDACTION_INVALID; // default response code
 	long http_code = 0;
 	curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
-    if (res == 0) {
-    	if (strncmp(responsebuffer,"False",5) == 0 && http_code == 200) {
-		return CARDACTION_ALLOWED;
-	} else if (strncmp(responsebuffer,"True",4) == 0 && http_code == 200) {
-		return CARDACTION_BLOCKED;
+	if (res == 0 && http_code == 200) {
+		//strncpy(inKeyAPtr,responsebuffer,31);
+		// Get the encoded key
+		size_t responseLen = strlen(responsebuffer);
+		char *delim = strpbrk(responsebuffer,",");
+		int delimLoc = delim-(&responsebuffer[0]);
+		strncpy(inKeyAPtr,responsebuffer,delimLoc);
+		char counterStr[32];
+		strncpy(counterStr,delim+1,responseLen);
+		*counterState = strtoul(counterStr,NULL,10);
+		*encodedKeyALen = delimLoc; 
+		response = CARDACTION_ALLOWED;
+	} else if (res == 0 && http_code == 403) {
+		response =  CARDACTION_BLOCKED;
 	} else {
-		return CARDACTION_INVALID;
+		printf("CURL error code: %d",res);
 	}
-    } else {
-    	printf("CURL error code: %d",res);
-    }
 	curl_easy_cleanup(curl);
-
+	return response;
 }
+
 
 // Utility function for curl
 

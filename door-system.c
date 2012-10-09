@@ -47,6 +47,7 @@ void formatDateTimeAsString(time_t time, char *buf) {
     gmt = gmtime(&time);
     size_t written = strftime(buf,128,"%a %d %B %H:%M:%S %Y %Z",gmt);}
 
+#define CCHS_SECTOR 15
 int 
 main(int argc, char **argv)
 {
@@ -61,6 +62,7 @@ main(int argc, char **argv)
 
 	char           *uid;
 	char lastuid[8];
+
 	device_count = nfc_list_devices(NULL, devices, 8);
 	if (device_count <= 0) {
 		printf("No NFC device found\n");
@@ -87,6 +89,10 @@ main(int argc, char **argv)
 					res = mifare_classic_connect(tag);
 					uid = freefare_get_tag_uid(tag);
 					time_t now = time(NULL);
+					unsigned char encodedKey[32];	
+					unsigned char decodedKey[16];
+					size_t encodedKeyALen = 0;
+					unsigned int counter = 0;
 					/* Enforce a minimum time between actions on the same card */
 					if (now-lastAction < 2 && strncmp(uid,lastuid,8) == 0) {
 						continue;
@@ -94,28 +100,41 @@ main(int argc, char **argv)
 					char timebuf[128];
 					formatDateTimeAsString(now,&timebuf[0]);
 					printf("[%s] Have mifare: %s\n",timebuf,uid);
-					cardAction access = checkIfCardIsValid(uid);	
+					cardAction access = checkIfCardIsValid(uid, &encodedKey, &encodedKeyALen,&counter);					   
+					decodeBase64String(&encodedKey,encodedKeyALen,&decodedKey,6);
+					print_hex(decodedKey,6);
 					if (access == CARDACTION_ALLOWED) {
-					res = mifare_classic_authenticate(tag,4,customSectorTwoKey,MFC_KEY_A);
+					MifareClassicBlockNumber counterBlock = mifare_classic_sector_first_block(15);
+					res = mifare_classic_authenticate(tag,counterBlock,(MifareClassicKey *)decodedKey,MFC_KEY_A);
 						if (res == 0) {
-							printf("Authenticated card successfully\n");
-							writeToAuditLog(uid,CARDACTION_ALLOWED);
+							printf("Authenticated card successfully\n");								
+							unsigned int counterValue = 0;
+							mifare_classic_read_value(tag,counterBlock,&counterValue,NULL);
+							printf("Expected counter value: %u, Current counter value: %u\n",counter, counterValue);
+							writeToAuditLog(uid,CARDACTION_ALLOWED, counterValue);
+							mifare_classic_decrement(tag,counterBlock,1);
+							mifare_classic_transfer(tag,counterBlock);
+							counterValue--;
+							setNewCounterValue(uid,counterValue);
 							has_valid_card();
 						} else {
 							printf("Could not authenticate to sector two\n");
-							writeToAuditLog(uid,CARDACTION_AUTHFAIL);
+							writeToAuditLog(uid,CARDACTION_AUTHFAIL,0);
 							has_invalid_card();
 						}
 					} else if (access != CARDACTION_INVALID) {
-						writeToAuditLog(uid, access);
+						writeToAuditLog(uid, access,0);
 						has_invalid_card();
 					}
 					free(uid);
 					res = mifare_classic_disconnect(tag);
+					//memset(decodedKey,0,6);
 					if (res != 0) {
 						printf("Failed to disconnect from tag\n");
 					}
 					strncpy(lastuid,uid,8);
+					//memset(encodedKey,0,32);
+					//memset(decodedKey,0,6);
 					lastAction = now;
 				
 				}

@@ -23,6 +23,13 @@ int main(int argc, char **argv) {
 	printf("Key: ");
 	print_hex(key, 6);
 	free(key);
+
+	const char *testBase64= "NEW2nspY";
+	char testBase64Output[7];
+	memset(testBase64Output,0,6);
+	decodeBase64String(testBase64,8,&testBase64Output[0],6);
+	printf("Base 64 Output: ");
+	print_hex(testBase64Output,6);	
 	return 0;
 			
 }
