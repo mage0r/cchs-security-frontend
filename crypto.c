@@ -52,7 +52,7 @@ char * getBase64String(char *inbytes, size_t inLen) {
 	memcpy(data,bptr->data,outputLen);
 	data[outputLen] = NULL;
 	BIO_free_all(bmem);
-	BIO_free_all(b64);
+	//BIO_free_all(b64);
 	return data;
 }
 
