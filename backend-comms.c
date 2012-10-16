@@ -3,12 +3,13 @@
 #include <string.h>
 #include <stdbool.h>
 #include "door-system.h"
+#include "local-settings.h"
 
 size_t write_response_data(void *buffer, size_t size, size_t nmemb, void *userp);
 
 void writeToAuditLog(char *uid, cardAction status, unsigned int counter) {
 	char log_url[128]; 
-	snprintf(log_url,128,AUDIT_LOG_URL,uid);
+	snprintf(log_url,128,AUDIT_LOG_URL,REMOTE_SERVER,uid);
 	char postdata[64];
 	snprintf(postdata,64,"status=%d&counter=%u",status,counter);
 
@@ -22,7 +23,7 @@ void writeToAuditLog(char *uid, cardAction status, unsigned int counter) {
 
 void setNewCounterValue(char *uid, unsigned int counter) {
 	char counter_url[128]; 
-	snprintf(counter_url,128,COUNTER_CHANGE_URL,uid);
+	snprintf(counter_url,128,COUNTER_CHANGE_URL,REMOTE_SERVER,uid);
 	char postdata[64];
 	snprintf(postdata,64,"counter=%u",counter);
 
@@ -37,7 +38,7 @@ void setNewCounterValue(char *uid, unsigned int counter) {
 bool addCard(char *uid, char *b64KeyA, char *b64KeyB) {
 	bool opSuccess = true;
 	char add_url[128], postdata[64];
-	snprintf(add_url,128,ADD_CARD_URL,uid);
+	snprintf(add_url,128,ADD_CARD_URL,REMOTE_SERVER,uid);
 
 	snprintf(postdata,64,"keyA=%s&keyB=%s",b64KeyA,b64KeyB);	
 
@@ -58,7 +59,7 @@ bool addCard(char *uid, char *b64KeyA, char *b64KeyB) {
 
 cardAction checkIfCardIsValid(char *uid, char *inKeyAPtr, size_t *encodedKeyALen, unsigned int *counterState) {
 	char check_url[128];
-	snprintf(check_url,128,CARD_VALID_URL,uid);
+	snprintf(check_url,128,CARD_VALID_URL,REMOTE_SERVER,uid);
 
 	char responsebuffer[2048];
 	memset(responsebuffer,0,2048);
