@@ -26,11 +26,15 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 #include "actions.h"
 #include "door-system.h"
 #include "time.h"
 #include "backend-comms.h"
+
+
+#include "settings.h"
 
 static nfc_device *device = NULL;
 static MifareTag *tags = NULL;
@@ -51,7 +55,8 @@ void formatDateTimeAsString(time_t time, char *buf) {
 int 
 main(int argc, char **argv)
 {
-	
+	openlog(PROCESS_IDENT, LOG_CONS | LOG_PID, LOG_USER);
+	setlogmask(LOG_UPTO(LOG_ERR));
 	connect_to_serial();
 
 	int             res;
@@ -99,18 +104,21 @@ main(int argc, char **argv)
 					}
 					char timebuf[128];
 					formatDateTimeAsString(now,&timebuf[0]);
-					printf("[%s] Have mifare: %s\n",timebuf,uid);
+					//printf("[%s] Have mifare: %s\n",timebuf,uid);
+					syslog(LOG_INFO, "Have mifare card: %s",uid);
+					
 					cardAction access = checkIfCardIsValid(uid, &encodedKey, &encodedKeyALen,&counter);					   
 					decodeBase64String(&encodedKey,encodedKeyALen,&decodedKey,6);
-					print_hex(decodedKey,6);
 					if (access == CARDACTION_ALLOWED) {
 					MifareClassicBlockNumber counterBlock = mifare_classic_sector_first_block(15);
 					res = mifare_classic_authenticate(tag,counterBlock,(MifareClassicKey *)decodedKey,MFC_KEY_A);
 						if (res == 0) {
-							printf("Authenticated card successfully\n");								
+							syslog(LOG_INFO,"Authenticated %s successfully",uid);
+							//printf("Authenticated card successfully\n");								
 							unsigned int counterValue = 0;
 							mifare_classic_read_value(tag,counterBlock,&counterValue,NULL);
-							printf("Expected counter value: %u, Current counter value: %u\n",counter, counterValue);
+							//printf("Expected counter value: %u, Current counter value: %u\n",counter, counterValue);
+							syslog(LOG_DEBUG, "Expected counter value for %s: %u, Current: %u",uid,counter,counterValue);
 							writeToAuditLog(uid,CARDACTION_ALLOWED, counterValue);
 							mifare_classic_decrement(tag,counterBlock,1);
 							mifare_classic_transfer(tag,counterBlock);
@@ -118,7 +126,8 @@ main(int argc, char **argv)
 							setNewCounterValue(uid,counterValue);
 							has_valid_card();
 						} else {
-							printf("Could not authenticate to sector two\n");
+							syslog(LOG_ERR,"Could not authenticate to sector on card %s",uid);
+							//printf("Could not authenticate to sector two\n");
 							writeToAuditLog(uid,CARDACTION_AUTHFAIL,0);
 							has_invalid_card();
 						}
@@ -130,7 +139,8 @@ main(int argc, char **argv)
 					res = mifare_classic_disconnect(tag);
 					//memset(decodedKey,0,6);
 					if (res != 0) {
-						printf("Failed to disconnect from tag\n");
+						syslog(LOG_ERR,"Failed to disconnect from tag");
+						//printf("Failed to disconnect from tag\n");
 					}
 					strncpy(lastuid,uid,8);
 					//memset(encodedKey,0,32);
@@ -148,6 +158,7 @@ main(int argc, char **argv)
 	tags = NULL;
 
 	nfc_close(device);
+	closelog();
 
 	return 0;
 }
