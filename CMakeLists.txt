@@ -19,7 +19,7 @@ if (BCM2835_FOUND)
 	set(ACTIONS_INCLUDE ${BCM2835_INCLUDE_DIR})
 endif (BCM2835_FOUND)
 
-ADD_EXECUTABLE(door-system crypto.c door-system.c backend-comms.c ${ACTIONS_FILE})
+ADD_EXECUTABLE(door-system crypto.c door-system.c backend-comms.c ${ACTIONS_FILE} door-monitor.c)
 ADD_EXECUTABLE(format-card format-card.cpp backend-comms.c crypto.c)
 ADD_EXECUTABLE(test-crypto test-crypto.c crypto.c)
 
