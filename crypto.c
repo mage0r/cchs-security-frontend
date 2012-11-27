@@ -50,7 +50,7 @@ char * getBase64String(char *inbytes, size_t inLen) {
 	size_t outputLen = bptr->length;
 	char *data = malloc(outputLen * sizeof(char)+1);
 	memcpy(data,bptr->data,outputLen);
-	data[outputLen] = NULL;
+	data[outputLen] = '\0';
 	BIO_free_all(bmem);
 	//BIO_free_all(b64);
 	return data;
