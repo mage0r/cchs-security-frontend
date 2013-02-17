@@ -18,13 +18,15 @@ int connect_to_serial() {
 	bcm2835_gpio_fsel(PIN_DOOR_SUCCESS, BCM2835_GPIO_FSEL_OUTP);
 	bcm2835_gpio_fsel(PIN_FAIL,BCM2835_GPIO_FSEL_OUTP);
 	bcm2835_gpio_fsel(PIN_DOOR_OPEN,BCM2835_GPIO_FSEL_INPT);
+	return 0;
 }
 
 void has_valid_card() {
 	bcm2835_gpio_write(PIN_LED_SUCCESS, HIGH);
 	bcm2835_gpio_write(PIN_DOOR_SUCCESS,HIGH);
+	//delay(1000);
 	delay(5000);
-	delay(5000);
+	//delay(5000);
 	bcm2835_gpio_write(PIN_LED_SUCCESS,LOW);
 	bcm2835_gpio_write(PIN_DOOR_SUCCESS,LOW);
 }

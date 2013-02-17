@@ -32,7 +32,7 @@
 #include "door-monitor.h"
 #include "time.h"
 #include "backend-comms.h"
-
+#include "crypto.h"
 
 #include "settings.h"
 
@@ -40,7 +40,7 @@ static nfc_device *device = NULL;
 static MifareTag *tags = NULL;
 MifareTag       tag = NULL;
 
-
+nfc_context *ctx;
 
 void            print_hex(unsigned char *pbtData, const size_t szBytes);
 #include <time.h>
@@ -48,11 +48,13 @@ void            print_hex(unsigned char *pbtData, const size_t szBytes);
 void formatDateTimeAsString(time_t time, char *buf) {   
     struct tm *gmt;
     gmt = gmtime(&time);
-    size_t written = strftime(buf,128,"%a %d %B %H:%M:%S %Y %Z",gmt);}
+    strftime(buf,128,"%a %d %B %H:%M:%S %Y %Z",gmt);
+}
 
 #define CCHS_SECTOR 15
 
 bool isDoorActivated = false;
+time_t lastScanTime = 0;
 int 
 main(int argc, char **argv)
 {
@@ -63,23 +65,23 @@ main(int argc, char **argv)
 	int             res;
 	nfc_connstring  devices[8];
 	size_t          device_count;
-
-	nfc_init(NULL);
-
+	printf("About to init NFC\n");
+	nfc_init(&ctx);
 	char           *uid;
 	char lastuid[8];
-
-	device_count = nfc_list_devices(NULL, devices, 8);
+	printf("Listing NFC devies\n");
+	device_count = nfc_list_devices(ctx, devices, 8);
 	if (device_count <= 0) {
 		printf("No NFC device found\n");
 		return 1;
 	}
-	MifareClassicBlock data;
+	//MifareClassicBlock data;
 
 	time_t lastAction = 0;
+	printf("Creating monitor thread\n");
 	create_monitor_thread();
 	for (size_t i = 0; i < device_count; i++) {
-		device = nfc_open(NULL, devices[i]);
+		device = nfc_open(ctx, devices[i]);
 		if (!device) {
 			printf("Could not open NFC device\n");
 			return 1;
@@ -95,8 +97,8 @@ main(int argc, char **argv)
 					res = mifare_classic_connect(tag);
 					uid = freefare_get_tag_uid(tag);
 					time_t now = time(NULL);
-					unsigned char encodedKey[32];	
-					unsigned char decodedKey[16];
+					char encodedKey[32];	
+					char decodedKey[16];
 					size_t encodedKeyALen = 0;
 					unsigned int counter = 0;
 					/* Enforce a minimum time between actions on the same card */
@@ -108,16 +110,16 @@ main(int argc, char **argv)
 					//printf("[%s] Have mifare: %s\n",timebuf,uid);
 					syslog(LOG_ERR | LOG_USER, "Have mifare card: %s",uid);
 					
-					cardAction access = checkIfCardIsValid(uid, &encodedKey, &encodedKeyALen,&counter);					   
-					decodeBase64String(&encodedKey,encodedKeyALen,&decodedKey,6);
+					cardAction access = checkIfCardIsValid(uid, &encodedKey[0], &encodedKeyALen,&counter);					   
+					decodeBase64String(&encodedKey[0],encodedKeyALen,&decodedKey[0],6);
 					if (access == CARDACTION_ALLOWED) {
 					MifareClassicBlockNumber counterBlock = mifare_classic_sector_first_block(15);
-					res = mifare_classic_authenticate(tag,counterBlock,(MifareClassicKey *)decodedKey,MFC_KEY_A);
+					res = mifare_classic_authenticate(tag,counterBlock,(const unsigned char *)&decodedKey[0],MFC_KEY_A);
 						if (res == 0) {
 							syslog(LOG_NOTICE | LOG_USER ,"Authenticated %s successfully",uid);
 							//printf("Authenticated card successfully\n");								
 							unsigned int counterValue = 0;
-							mifare_classic_read_value(tag,counterBlock,&counterValue,NULL);
+							mifare_classic_read_value(tag,counterBlock,(int *)&counterValue,NULL);
 							//printf("Expected counter value: %u, Current counter value: %u\n",counter, counterValue);
 							syslog(LOG_DEBUG | LOG_USER, "Expected counter value for %s: %u, Current: %u",uid,counter,counterValue);
 							writeToAuditLog(uid,CARDACTION_ALLOWED, counterValue);
@@ -154,12 +156,13 @@ main(int argc, char **argv)
 			}
 			tag = NULL;
 			freefare_free_tags(tags);
+			lastScanTime = time(NULL);
 		}
 	}
 	tag = NULL;
 	device = NULL;
 	tags = NULL;
-
+	printf("Closing NFC device\n");
 	nfc_close(device);
 	closelog();
 

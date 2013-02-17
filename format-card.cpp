@@ -33,18 +33,18 @@ int main(int argc, char **argv) {
 	int res;
 	nfc_connstring devices[8];
 	size_t device_count;
-
+	nfc_context *nfcctx;
 	char *uid = NULL;
 	init_crypto_state();
-	nfc_init(NULL);
+	nfc_init(&nfcctx);
 	
-	device_count = nfc_list_devices(NULL,devices,8);
+	device_count = nfc_list_devices(nfcctx,devices,8);
 
 	if (device_count <= 0) {
 		std::cerr << "No device found" << std::endl;
 	}
 
-	device = nfc_open(NULL, devices[0]);
+	device = nfc_open(nfcctx, devices[0]);
     	tags = freefare_get_tags(device);
 
 	if (tags[0] == NULL) {
