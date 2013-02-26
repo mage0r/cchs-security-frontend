@@ -13,8 +13,14 @@ CURL *setup_curl_instance() {
 	curl_easy_setopt(curl, CURLOPT_CAINFO, CA_BUNDLE);
 	curl_easy_setopt(curl, CURLOPT_CAPATH, CA_BUNDLE);
 	curl_easy_setopt(curl, CURLOPT_SSLCERT, CLIENT_BUNDLE);
+#ifdef CURL_DEBUG
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+#endif
+#ifdef SSL_VERIFY_HOST
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+#else
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+#endif
 	return curl;
 
 }
