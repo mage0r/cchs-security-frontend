@@ -6,6 +6,8 @@
 #include <syslog.h>
 #include <time.h>
 #include <stdio.h>
+
+#ifdef RASPI
 #include <bcm2835.h>
 
 extern bool isDoorActivated;
@@ -31,3 +33,8 @@ void *monitor_thread(void *ptr) {
 		}
 	}
 }
+#else
+
+void create_monitor_thread() {
+}
+#endif
