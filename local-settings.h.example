@@ -1,3 +1,5 @@
 #pragma once
 
 #define REMOTE_SERVER "localhost:8000"
+#define CA_BUNDLE "ca.crt"
+#define CLIENT_BUNDLE "client-certs.bundle"

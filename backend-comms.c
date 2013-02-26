@@ -7,13 +7,24 @@
 
 size_t write_response_data(void *buffer, size_t size, size_t nmemb, void *userp);
 
+CURL *setup_curl_instance() {
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl,CURLOPT_SSL_VERIFYPEER, true);
+	curl_easy_setopt(curl, CURLOPT_CAINFO, CA_BUNDLE);
+	curl_easy_setopt(curl, CURLOPT_CAPATH, CA_BUNDLE);
+	curl_easy_setopt(curl, CURLOPT_SSLCERT, CLIENT_BUNDLE);
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
+	return curl;
+
+}
 void writeToAuditLog(char *uid, cardAction status, unsigned int counter) {
 	char log_url[128]; 
 	snprintf(log_url,128,AUDIT_LOG_URL,REMOTE_SERVER,uid);
 	char postdata[64];
 	snprintf(postdata,64,"status=%d&counter=%u",status,counter);
 
-	CURL *curl = curl_easy_init();
+	CURL *curl = setup_curl_instance();
 	curl_easy_setopt(curl, CURLOPT_URL, log_url);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata);
 	CURLcode res = curl_easy_perform(curl);
@@ -27,7 +38,7 @@ void setNewCounterValue(char *uid, unsigned int counter) {
 	char postdata[64];
 	snprintf(postdata,64,"counter=%u",counter);
 
-	CURL *curl = curl_easy_init();
+	CURL *curl = setup_curl_instance();
 	curl_easy_setopt(curl, CURLOPT_URL, counter_url);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata);
 	CURLcode res = curl_easy_perform(curl);
@@ -42,7 +53,7 @@ bool addCard(char *uid, char *b64KeyA, char *b64KeyB) {
 
 	snprintf(postdata,64,"keyA=%s&keyB=%s",b64KeyA,b64KeyB);	
 
-	CURL *curl = curl_easy_init();
+	CURL *curl = setup_curl_instance();
 	curl_easy_setopt(curl, CURLOPT_URL, add_url);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS,postdata);
 	CURLcode res = curl_easy_perform(curl);
@@ -64,7 +75,7 @@ cardAction checkIfCardIsValid(char *uid, char *inKeyAPtr, size_t *encodedKeyALen
 	char responsebuffer[2048];
 	memset(responsebuffer,0,2048);
 
-	CURL *curl = curl_easy_init();
+	CURL *curl = setup_curl_instance();
     curl_easy_setopt(curl, CURLOPT_URL, check_url);
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_response_data);
