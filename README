@@ -8,9 +8,11 @@ Requirements:
 - libnfc and libfreefare
 - libcurl 
 - the accompanying 'backend/server' program
+- SSL certificate authentication configured on the server, and corresponding
+  copies of the CA and client certificates
 
-Edit Makefile with the correct paths to the libnfc, libfreefare and libusb (if
-used by your reader). In the future I will move this to CMake.
+See http://www.hackmelbourne.org/wiki/index.php/Project/Access_System/Installation_Instructions 
+for more detailed installation instructions
 
 There are hooks in action.c for actions that take place when a valid or
 invalid card is presented. For now, this just involves sending either 
