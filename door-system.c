@@ -33,7 +33,7 @@
 #include "time.h"
 #include "backend-comms.h"
 #include "crypto.h"
-
+#include "ipc.h"
 #include "settings.h"
 
 static nfc_device *device = NULL;
@@ -80,6 +80,13 @@ main(int argc, char **argv)
 	time_t lastAction = 0;
 	printf("Creating monitor thread\n");
 	create_monitor_thread();
+        
+        printf("Creating IPC\n");
+        int ipc_created = create_ipc_fifo();
+        
+        if (ipc_created != 0) {
+            printf("Could not create IPC!\n");
+        }
 	for (size_t i = 0; i < device_count; i++) {
 		device = nfc_open(ctx, devices[i]);
 		if (!device) {
@@ -108,11 +115,17 @@ main(int argc, char **argv)
 					char timebuf[128];
 					formatDateTimeAsString(now,&timebuf[0]);
 					//printf("[%s] Have mifare: %s\n",timebuf,uid);
-					syslog(LOG_ERR | LOG_USER, "Have mifare card: %s",uid);
+					send_ipc_message(CARD_PRESENTED,&uid[0]);
+                                        syslog(LOG_ERR | LOG_USER, "Have mifare card: %s",uid);
+                                        
 					
 					cardAction access = checkIfCardIsValid(uid, &encodedKey[0], &encodedKeyALen,&counter);					   
-					decodeBase64String(&encodedKey[0],encodedKeyALen,&decodedKey[0],6);
-					if (access == CARDACTION_ALLOWED) {
+					if (access == CARDACTION_NETFAIL) {
+                                            syslog(LOG_NOTICE | LOG_USER, "Network error when checking card validity");
+                                            send_ipc_message(NETWORK_ERROR,NULL);
+                                            has_invalid_card();
+                                        } else if (access == CARDACTION_ALLOWED) {
+                                        decodeBase64String(&encodedKey[0],encodedKeyALen,&decodedKey[0],6);
 					MifareClassicBlockNumber counterBlock = mifare_classic_sector_first_block(15);
 					res = mifare_classic_authenticate(tag,counterBlock,(const unsigned char *)&decodedKey[0],MFC_KEY_A);
 						if (res == 0) {
@@ -128,6 +141,7 @@ main(int argc, char **argv)
 							counterValue--;
 							setNewCounterValue(uid,counterValue);
 							isDoorActivated = true;
+                                                        send_ipc_message(DOOR_OPEN,NULL);
 							has_valid_card();
 							isDoorActivated = false;
 						} else {
@@ -137,6 +151,7 @@ main(int argc, char **argv)
 							has_invalid_card();
 						}
 					} else if (access != CARDACTION_INVALID) {
+                                                send_ipc_message(CARD_DECLINED,&uid[0]);
 						writeToAuditLog(uid, access,0);
 						has_invalid_card();
 					}

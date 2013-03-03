@@ -31,8 +31,9 @@ memset(&tio,0,sizeof(tio));
 }
 
 void has_valid_card() {
-	unsigned char vbyte = 'v';
-	int written = write(tty_fd,&vbyte,1);
+	/* unsigned char vbyte = 'v';
+	int written = write(tty_fd,&vbyte,1); */
+    sleep(5);
 }
 void has_invalid_card() {
 	char ibyte = 'i';

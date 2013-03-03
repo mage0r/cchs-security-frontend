@@ -7,6 +7,8 @@
 #include <time.h>
 #include <stdio.h>
 
+#include "ipc.h"
+
 #ifdef RASPI
 #include <bcm2835.h>
 
@@ -24,6 +26,7 @@ void *monitor_thread(void *ptr) {
 		gpioStatus = read_door_open();
 		if (gpioStatus == 1 && isDoorActivated == false) {
 			printf("Door is opened.. when it shouldn't be\n");
+                        send_ipc_message(DOOR_ALERT,NULL);
 			syslog(LOG_CRIT | LOG_USER, "Security alert: door open without card");
 		}
 		delay(500);

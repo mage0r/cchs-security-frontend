@@ -75,41 +75,47 @@ bool addCard(char *uid, char *b64KeyA, char *b64KeyB) {
 }
 
 cardAction checkIfCardIsValid(char *uid, char *inKeyAPtr, size_t *encodedKeyALen, unsigned int *counterState) {
-	char check_url[128];
-	snprintf(check_url,128,CARD_VALID_URL,REMOTE_SERVER,uid);
+    char check_url[128];
+    snprintf(check_url, 128, CARD_VALID_URL, REMOTE_SERVER, uid);
 
-	char responsebuffer[2048];
-	memset(responsebuffer,0,2048);
+    char responsebuffer[2048];
+    memset(responsebuffer, 0, 2048);
 
-	CURL *curl = setup_curl_instance();
+    CURL *curl = setup_curl_instance();
     curl_easy_setopt(curl, CURLOPT_URL, check_url);
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_response_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responsebuffer);
 
     CURLcode res = curl_easy_perform(curl);
-	cardAction response = CARDACTION_INVALID; // default response code
-	long http_code = 0;
-	curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
-	if (res == 0 && http_code == 200) {
-		//strncpy(inKeyAPtr,responsebuffer,31);
-		// Get the encoded key
-		size_t responseLen = strlen(responsebuffer);
-		char *delim = strpbrk(responsebuffer,",");
-		int delimLoc = delim-(&responsebuffer[0]);
-		strncpy(inKeyAPtr,responsebuffer,delimLoc);
-		char counterStr[32];
-		strncpy(counterStr,delim+1,responseLen);
-		*counterState = strtoul(counterStr,NULL,10);
-		*encodedKeyALen = delimLoc; 
-		response = CARDACTION_ALLOWED;
-	} else if (res == 0 && http_code == 403) {
-		response =  CARDACTION_BLOCKED;
-	} else {
-		printf("CURL error code: %d",res);
-	}
-	curl_easy_cleanup(curl);
-	return response;
+    if (res != CURLE_OK) {
+        curl_easy_cleanup(curl);
+        return CARDACTION_NETFAIL;
+    }
+    cardAction response = CARDACTION_INVALID; // default response code
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    if (res == 0 && http_code == 200) {
+        //strncpy(inKeyAPtr,responsebuffer,31);
+        // Get the encoded key
+        size_t responseLen = strlen(responsebuffer);
+        char *delim = strpbrk(responsebuffer, ",");
+        int delimLoc = delim - (&responsebuffer[0]);
+        strncpy(inKeyAPtr, responsebuffer, delimLoc);
+        char counterStr[32];
+        strncpy(counterStr, delim + 1, responseLen);
+        *counterState = strtoul(counterStr, NULL, 10);
+        *encodedKeyALen = delimLoc;
+        response = CARDACTION_ALLOWED;
+    } else if (res == 0 && http_code == 403) {
+        response = CARDACTION_BLOCKED;
+    } else if (res == 0 && http_code > 500) {
+      response = CARDACTION_NETFAIL;  
+    } else {
+        printf("CURL error code: %d", res);
+    }
+    curl_easy_cleanup(curl);
+    return response;
 }
 
 
