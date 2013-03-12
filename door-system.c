@@ -55,6 +55,7 @@ void formatDateTimeAsString(time_t time, char *buf) {
 
 bool isDoorActivated = false;
 time_t lastScanTime = 0;
+time_t doorOpenTime = 0;
 int 
 main(int argc, char **argv)
 {
@@ -100,6 +101,7 @@ main(int argc, char **argv)
 			for (int i = 0; tags[i]; i++) {
 				if ((freefare_get_tag_type(tags[i]) == CLASSIC_1K) ||
 				    (freefare_get_tag_type(tags[i]) == CLASSIC_4K)) {
+                                    /* State: Card in field */
 					tag = tags[i];
 					res = mifare_classic_connect(tag);
 					uid = freefare_get_tag_uid(tag);
@@ -141,13 +143,20 @@ main(int argc, char **argv)
 							counterValue--;
 							setNewCounterValue(uid,counterValue);
 							isDoorActivated = true;
+                                                        /* State: Door open */
                                                         send_ipc_message(DOOR_OPEN,NULL);
+                                                        doorOpenTime = time(NULL);
 							has_valid_card();
-							isDoorActivated = false;
+                                                        
+                                                        int dummy = 0;
+                                                        while(isDoorActivated) {
+                                                            dummy++;
+                                                        }
 						} else {
 							syslog(LOG_ERR,"Could not authenticate to sector on card %s",uid);
 							//printf("Could not authenticate to sector two\n");
 							writeToAuditLog(uid,CARDACTION_AUTHFAIL,0);
+                                                        send_ipc_message(CARD_DECLINED,&uid[0]);
 							has_invalid_card();
 						}
 					} else if (access != CARDACTION_INVALID) {

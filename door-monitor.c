@@ -14,6 +14,9 @@
 
 extern bool isDoorActivated;
 extern time_t lastScanTime;
+extern time_t doorOpenTime;
+bool hasDoorBeenOpened = false;
+
 void *monitor_thread(void *ptr);
 void create_monitor_thread() {
 pthread_t thread1;
@@ -24,16 +27,29 @@ void *monitor_thread(void *ptr) {
 	uint8_t gpioStatus;
 	while(1) {
 		gpioStatus = read_door_open();
-		if (gpioStatus == 1 && isDoorActivated == false) {
+                time_t now = time(NULL);
+		if ((gpioStatus == 1 && isDoorActivated == false) ||
+                        (gpioStatus == 1 && hasDoorBeenOpened && (now-doorOpenTime) > 60)) {
 			printf("Door is opened.. when it shouldn't be\n");
-                        send_ipc_message(DOOR_ALERT,NULL);
+                        send_ipc_message(SECURITY_BREACH,NULL);
 			syslog(LOG_CRIT | LOG_USER, "Security alert: door open without card");
-		}
-		delay(500);
-		time_t now = time(NULL);
-		if (now-lastScanTime > 5000) {
-			printf("Last scan time was more than 5s ago\n");
-		}
+		} else if ((gpioStatus == 1 && isDoorActivated == true && !hasDoorBeenOpened)) {
+                    hasDoorBeenOpened = true;
+                }
+                /* Transition from door open to closed */
+                else if (gpioStatus == 0 && isDoorActivated == true && hasDoorBeenOpened == true) {
+                    isDoorActivated = false;
+                    hasDoorBeenOpened = false;
+                    send_ipc_message(DOOR_CLOSED,NULL);
+                    close_door();
+                    syslog(LOG_USER,"Door has been closed");
+                } 
+                /* Door is open for more than 30s after being legitimately opened */
+                else if (isDoorActivated == true && (now-doorOpenTime) > 30) {
+                    send_ipc_message(DOOR_ALERT,NULL);
+                    syslog(LOG_CRIT | LOG_USER, "Door open for more than 30s");
+                }	
+                sleep(1);
 	}
 }
 #else

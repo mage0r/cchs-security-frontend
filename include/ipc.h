@@ -17,7 +17,9 @@ extern "C" {
                 DOOR_OPEN = 2,
                 DOOR_ALERT = 3,
                 NETWORK_ERROR = 4,
-                CARD_DECLINED = 5
+                CARD_DECLINED = 5,
+                DOOR_CLOSED = 6,
+                SECURITY_BREACH = 7
     } eventId;
     typedef struct  {
         eventId event;

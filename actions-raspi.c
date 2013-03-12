@@ -25,10 +25,15 @@ void has_valid_card() {
 	bcm2835_gpio_write(PIN_LED_SUCCESS, HIGH);
 	bcm2835_gpio_write(PIN_DOOR_SUCCESS,HIGH);
 	//delay(1000);
-	delay(5000);
+	/* delay(30000);
 	//delay(5000);
 	bcm2835_gpio_write(PIN_LED_SUCCESS,LOW);
-	bcm2835_gpio_write(PIN_DOOR_SUCCESS,LOW);
+	bcm2835_gpio_write(PIN_DOOR_SUCCESS,LOW); */
+}
+
+void close_door() {
+    bcm2835_gpio_write(PIN_LED_SUCCESS,LOW);
+    bcm2835_gpio_write(PIN_DOOR_SUCCESS,LOW);
 }
 void has_invalid_card() {
 	bcm2835_gpio_write(PIN_FAIL, HIGH);
