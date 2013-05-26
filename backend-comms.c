@@ -2,6 +2,7 @@
 #include "settings.h"
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "door-system.h"
 #include "local-settings.h"
 
@@ -34,7 +35,9 @@ void writeToAuditLog(char *uid, cardAction status, unsigned int counter) {
 	curl_easy_setopt(curl, CURLOPT_URL, log_url);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata);
 	CURLcode res = curl_easy_perform(curl);
-
+        if (res != 0) {
+            printf("Could not write to audit log\n");
+        }
 	curl_easy_cleanup(curl);
 }
 
@@ -48,7 +51,9 @@ void setNewCounterValue(char *uid, unsigned int counter) {
 	curl_easy_setopt(curl, CURLOPT_URL, counter_url);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata);
 	CURLcode res = curl_easy_perform(curl);
-
+        if (res != 0) {
+            printf("Could not set counter value\n");
+        }
 	curl_easy_cleanup(curl);
 }
 
@@ -63,7 +68,9 @@ bool addCard(char *uid, char *b64KeyA, char *b64KeyB) {
 	curl_easy_setopt(curl, CURLOPT_URL, add_url);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS,postdata);
 	CURLcode res = curl_easy_perform(curl);
-
+        if (res != 0) {
+            return false;
+        }
 	long http_code = 0;
 	curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
 

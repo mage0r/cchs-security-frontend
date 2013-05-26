@@ -38,19 +38,20 @@ unsigned char * get_random_bytes(size_t len) {
     return randbytes;
 }
 
-char * getBase64String(char *inbytes, size_t inLen) {
+char * getBase64String(char *inbytes, size_t inLen, size_t *outputLen) {
 	BIO *b64, *bmem;
 	b64 = BIO_new(BIO_f_base64());
 	bmem = BIO_new(BIO_s_mem());
 	bmem = BIO_push(b64, bmem);
 	BIO_write(bmem,inbytes,inLen);
-	BIO_flush(bmem);
+	(void) BIO_flush(bmem);
 	BUF_MEM *bptr;
 	BIO_get_mem_ptr(bmem,&bptr);
-	size_t outputLen = bptr->length;
-	char *data = malloc(outputLen * sizeof(char)+1);
-	memcpy(data,bptr->data,outputLen);
-	data[outputLen] = '\0';
+        size_t outLen = bptr->length;
+	char *data = malloc(outLen * sizeof(char)+1);
+	memcpy(data,bptr->data,outLen);
+	data[outLen] = '\0';
+        *outputLen=outLen;
 	BIO_free_all(bmem);
 	//BIO_free_all(b64);
 	return data;
