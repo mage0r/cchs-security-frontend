@@ -8,7 +8,11 @@
 #include "crypto.h"
 #include "backend-comms.h"
 
-#define PRETEND 1
+//#define PRETEND 0
+
+MifareClassicKey defaultKey = {0xff,0xff,0xff,0xff,0xff,0xff};
+#define SECTOR_15_BLOCK_0_BITS 0x1 // only allow read or decrement
+#define SECTOR_15_BLOCK_0_INIT 0xFFFFFFFF // only go down from here 
 
 void 
 print_hex(unsigned char *pbtData, const size_t szBytes)
@@ -21,9 +25,9 @@ print_hex(unsigned char *pbtData, const size_t szBytes)
 	printf("\n");
 }
 
-int format_card(MifareTag *tag, char *uid, char *keyAEnc, char *keyBEnc) {
+int format_card(MifareTag tag, char *uid, char *keyAEnc, char *keyBEnc) {
     MifareClassicKey *keyA = (MifareClassicKey *)get_random_bytes(6);
-	
+	int res = 0;
         size_t b64EncLen = 0;
 	char *b64KeyA = getBase64String((char *)keyA,6, &b64EncLen);
         printf("B64KeyA: %s\n",b64KeyA);
@@ -42,14 +46,19 @@ int format_card(MifareTag *tag, char *uid, char *keyAEnc, char *keyBEnc) {
         syslog(LOG_NOTICE | LOG_USER ,"Keys for %s: %s , %s",uid,b64KeyA,b64KeyB);
 	bool addedToServer = addCard(uid,b64KeyA,b64KeyB);	
 
+	res = mifare_classic_connect(tag);
+	if (res != 0) {
+		printf("Could not connect to card\n");
+		return -2;
+	}
 	// Authenticate with default key to make changes
 	
 	MifareClassicBlockNumber lastTrailer = mifare_classic_sector_last_block(15);
 #ifndef PRETEND
 	res = mifare_classic_authenticate(tag,lastTrailer,defaultKey,MFC_KEY_A);
 	if (res != 0) {
-		printf("Could not authenticate with default key.. card already formatted?\n");
-		return -1;
+		printf("Could not authenticate with default key.. card already formatted? (1)\n");
+		return -2;
 	}	
 #endif
         
@@ -68,7 +77,7 @@ int format_card(MifareTag *tag, char *uid, char *keyAEnc, char *keyBEnc) {
         res = mifare_classic_write(tag,lastTrailer,trailerBlock);	
 	if (res != 0) {
 		printf("Could not write sector 15 trailer. STOP\n");
-		return -1;
+		return -2;
 	} 	
 #endif
 	MifareClassicBlock normalTrailerBlock;
@@ -82,13 +91,13 @@ int format_card(MifareTag *tag, char *uid, char *keyAEnc, char *keyBEnc) {
 		res = mifare_classic_authenticate(tag,trailerBlockNumber,defaultKey,MFC_KEY_A);
 		if (res != 0) {
 			printf("Could not authenticate with default key.. card already formatted?\n");
-			return -1;
+			return -2;
 		}	
 
 		res = mifare_classic_write(tag,trailerBlockNumber,normalTrailerBlock);
 		if (res != 0) {
 			printf("Could not write trailer block for sector %d\n",sector);
-			return -1;
+			return -2;
 		} else {
 			printf("Wrote trailer block for sector %d\n",sector);
 		}

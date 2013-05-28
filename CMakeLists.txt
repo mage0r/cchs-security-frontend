@@ -40,7 +40,7 @@ endif (BCM2835_FOUND)
 
 if (DIRECT_FOUND AND DIRECTFB_FOUND) 
     ADD_EXECUTABLE(cutter-gui key-cutter/cutter-gui.c key-cutter/cutter-screens.c key-cutter/format-common.c crypto.c backend-comms.c )
-    include_directories(${DIRECT_INCLUDE} ${DIRECTFB_INCLUDE_DIRS})
+    include_directories(key-cutter/ ${DIRECT_INCLUDE} ${DIRECTFB_INCLUDE_DIRS})
     target_link_libraries(cutter-gui ${DIRECTFB_LDFLAGS} ${DIRECT_LDFLAGS} 
             ${CURL_LIBRARIES} ${LIBNFC_LDFLAGS} ${LIBFREEFARE_LDFLAGS})
 endif (DIRECT_FOUND AND DIRECTFB_FOUND)

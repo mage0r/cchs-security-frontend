@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-int format_card(MifareTag *tag, char *uid, char *keyAEnc, char *keyBEnc);
+int format_card(MifareTag tag, char *uid, char *keyAEnc, char *keyBEnc);
 
 
 
