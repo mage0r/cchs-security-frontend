@@ -48,6 +48,7 @@ void *monitor_thread(void *ptr) {
                 else if (isDoorActivated == true && (now-doorOpenTime) > 30) {
                     send_ipc_message(DOOR_ALERT,NULL);
                     syslog(LOG_CRIT | LOG_USER, "Door open for more than 30s");
+                    close_door();
                 }	
                 sleep(1);
 	}
