@@ -33,9 +33,7 @@ void *monitor_thread(void *ptr) {
 			printf("Door is opened.. when it shouldn't be\n");
                         send_ipc_message(SECURITY_BREACH,NULL);
 			syslog(LOG_CRIT | LOG_USER, "Security alert: door open without card");
-		} else if ((gpioStatus == 1 && isDoorActivated == true && !hasDoorBeenOpened)) {
-                    hasDoorBeenOpened = true;
-                }
+		} 
                 /* Transition from door open to closed */
                 else if (gpioStatus == 0 && isDoorActivated == true && hasDoorBeenOpened == true) {
                     isDoorActivated = false;
@@ -49,7 +47,14 @@ void *monitor_thread(void *ptr) {
                     send_ipc_message(DOOR_ALERT,NULL);
                     syslog(LOG_CRIT | LOG_USER, "Door open for more than 30s");
                     close_door();
-                }	
+	            if (!hasDoorBeenOpened) {
+			isDoorActivated = false;
+		    	send_ipc_message(DOOR_CLOSED,NULL);
+			syslog(LOG_USER,"Door was not opened");
+		    }
+                } else if ((gpioStatus == 1 && isDoorActivated == true && !hasDoorBeenOpened)) {
+                    hasDoorBeenOpened = true;
+                }
                 sleep(1);
 	}
 }
