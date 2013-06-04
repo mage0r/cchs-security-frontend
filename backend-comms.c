@@ -106,16 +106,26 @@ cardAction checkIfCardIsValid(char *uid, char *inKeyAPtr, size_t *encodedKeyALen
         //strncpy(inKeyAPtr,responsebuffer,31);
         // Get the encoded key
         size_t responseLen = strlen(responsebuffer);
-        char *delim = strpbrk(responsebuffer, ",");
-        int delimLoc = delim - (&responsebuffer[0]);
+        char *first_delim = strpbrk(responsebuffer, ",");
+        int delimLoc = first_delim - (&responsebuffer[0]);
         strncpy(inKeyAPtr, responsebuffer, delimLoc);
         char counterStr[32];
-        strncpy(counterStr, delim + 1, responseLen);
+        
+        char *next_delim = strpbrk(first_delim+1,",");
+        int end_counter = next_delim - first_delim+1;
+        strncpy(counterStr, first_delim + 1, end_counter);
+        
+        int isExit = strtoull(next_delim+1,NULL,10);
         *counterState = strtoul(counterStr, NULL, 10);
         *encodedKeyALen = delimLoc;
-        response = CARDACTION_ALLOWED;
+        if (isExit)
+            response = CARDACTION_ALLOWEXIT; 
+        else
+                response = CARDACTION_ALLOWED;
     } else if (res == 0 && http_code == 403) {
         response = CARDACTION_BLOCKED;
+    } else if (res == 0 && http_code == 404) {
+        response = CARDACTION_NOTFOUND;
     } else if (res == 0 && http_code > 500) {
       response = CARDACTION_NETFAIL;  
     } else {

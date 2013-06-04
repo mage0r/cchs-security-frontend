@@ -99,8 +99,7 @@ main(int argc, char **argv)
 			
 			tag = NULL;
 			for (int i = 0; tags[i]; i++) {
-				if ((freefare_get_tag_type(tags[i]) == CLASSIC_1K) ||
-				    (freefare_get_tag_type(tags[i]) == CLASSIC_4K)) {
+				if ((freefare_get_tag_type(tags[i]) == CLASSIC_1K)) {
                                     /* State: Card in field */
 					tag = tags[i];
 					res = mifare_classic_connect(tag);
@@ -126,7 +125,7 @@ main(int argc, char **argv)
                                             syslog(LOG_NOTICE | LOG_USER, "Network error when checking card validity");
                                             send_ipc_message(NETWORK_ERROR,NULL);
                                             has_invalid_card();
-                                        } else if (access == CARDACTION_ALLOWED) {
+                                        } else if (access == CARDACTION_ALLOWED || access == CARDACTION_ALLOWEXIT) {
                                         decodeBase64String(&encodedKey[0],encodedKeyALen,&decodedKey[0],6);
 					MifareClassicBlockNumber counterBlock = mifare_classic_sector_first_block(15);
 					res = mifare_classic_authenticate(tag,counterBlock,(const unsigned char *)&decodedKey[0],MFC_KEY_A);
@@ -137,14 +136,18 @@ main(int argc, char **argv)
 							mifare_classic_read_value(tag,counterBlock,(int *)&counterValue,NULL);
 							//printf("Expected counter value: %u, Current counter value: %u\n",counter, counterValue);
 							syslog(LOG_DEBUG | LOG_USER, "Expected counter value for %s: %u, Current: %u",uid,counter,counterValue);
-							writeToAuditLog(uid,CARDACTION_ALLOWED, counterValue);
+							writeToAuditLog(uid,access, counterValue);
 							mifare_classic_decrement(tag,counterBlock,1);
 							mifare_classic_transfer(tag,counterBlock);
 							counterValue--;
 							setNewCounterValue(uid,counterValue);
 							isDoorActivated = true;
                                                         /* State: Door open */
-                                                        send_ipc_message(DOOR_OPEN,NULL);
+                                                        if (access == CARDACTION_ALLOWED) {
+                                                            send_ipc_message(DOOR_OPEN,NULL);
+                                                        } else {
+                                                            send_ipc_message(DOOR_OPEN_EXIT,NULL);
+                                                        }
                                                         doorOpenTime = time(NULL);
 							has_valid_card();
                                                         
@@ -159,11 +162,13 @@ main(int argc, char **argv)
                                                         send_ipc_message(CARD_DECLINED,&uid[0]);
 							has_invalid_card();
 						}
-					} else if (access != CARDACTION_INVALID) {
+					} else if (access == CARDACTION_NOTFOUND) {
+                                                send_ipc_message(NOT_OUR_CARD,NULL);
+                                        } else if (access != CARDACTION_INVALID) {
                                                 send_ipc_message(CARD_DECLINED,&uid[0]);
 						writeToAuditLog(uid, access,0);
 						has_invalid_card();
-					}
+					} 
 					free(uid);
 					res = mifare_classic_disconnect(tag);
 					//memset(decodedKey,0,6);
@@ -176,7 +181,9 @@ main(int argc, char **argv)
 					//memset(decodedKey,0,6);
 					lastAction = now;
 				
-				}
+				} else {
+                                    send_ipc_message(NOT_OUR_CARD,NULL);
+                                }
 			}
 			tag = NULL;
 			freefare_free_tags(tags);
