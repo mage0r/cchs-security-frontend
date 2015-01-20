@@ -31,6 +31,7 @@ void *monitor_thread(void *ptr) {
 		if ((gpioStatus == 1 && isDoorActivated == false) ||
                         (gpioStatus == 1 && hasDoorBeenOpened && (now-doorOpenTime) > 60)) {
 			printf("Door is opened.. when it shouldn't be\n");
+			close_door();
                         send_ipc_message(SECURITY_BREACH,NULL);
 			syslog(LOG_CRIT | LOG_USER, "Security alert: door open without card");
 		} 
