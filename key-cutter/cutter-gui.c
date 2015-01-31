@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
                     } else if (status == CARDACTION_BLOCKED) {
                         drawBlockedCardScreen(uid);
                         sleep(5);
-                    } else if (status == CARDACTION_INVALID) {
+                    } else if (status == CARDACTION_INVALID || status == CARDACTION_NOTFOUND) {
                         drawFormattingScreen();
                         char b64KeyA[32],b64KeyB[32];
                         int format_status = format_card(tags[i],uid,&b64KeyA[0],&b64KeyB[0]);
