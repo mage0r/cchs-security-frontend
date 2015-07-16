@@ -169,6 +169,7 @@ main(int argc, char **argv)
 						writeToAuditLog(uid, access,0);
 						has_invalid_card();
 					} 
+					strncpy(lastuid,uid,8);
 					free(uid);
 					res = mifare_classic_disconnect(tag);
 					//memset(decodedKey,0,6);
@@ -176,7 +177,6 @@ main(int argc, char **argv)
 						syslog(LOG_ERR,"Failed to disconnect from tag");
 						//printf("Failed to disconnect from tag\n");
 					}
-					strncpy(lastuid,uid,8);
 					//memset(encodedKey,0,32);
 					//memset(decodedKey,0,6);
 					lastAction = now;
