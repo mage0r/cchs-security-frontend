@@ -61,7 +61,9 @@ main(int argc, char **argv)
 {
 	openlog(PROCESS_IDENT, LOG_CONS | LOG_PID, LOG_USER);
 	setlogmask(LOG_UPTO(LOG_INFO));
-	connect_to_serial();
+	if(connect_to_serial() == -1) {
+		return -1;
+	}
 
 	int             res;
 	nfc_connstring  devices[8];
