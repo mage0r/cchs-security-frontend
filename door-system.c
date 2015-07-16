@@ -69,7 +69,8 @@ main(int argc, char **argv)
 	printf("About to init NFC\n");
 	nfc_init(&ctx);
 	char           *uid;
-	char lastuid[8];
+	char lastuid[9]; lastuid[sizeof(lastuid)-1] = '\0';
+	
 	printf("Listing NFC devies\n");
 	device_count = nfc_list_devices(ctx, devices, 8);
 	if (device_count <= 0) {
