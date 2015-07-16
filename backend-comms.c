@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <errno.h>
 #include "door-system.h"
 #include "local-settings.h"
 
@@ -107,16 +108,32 @@ cardAction checkIfCardIsValid(char *uid, char *inKeyAPtr, size_t *encodedKeyALen
         // Get the encoded key
         size_t responseLen = strlen(responsebuffer);
         char *first_delim = strpbrk(responsebuffer, ",");
-        int delimLoc = first_delim - (&responsebuffer[0]);
+	if (!first_delim) {
+		printf("Bad response from the server, did not contain the required field. Response len %ld\n", responseLen);
+		return CARDACTION_NETFAIL;
+	}
+        size_t delimLoc = first_delim - (&responsebuffer[0]);
         strncpy(inKeyAPtr, responsebuffer, delimLoc);
         char counterStr[32];
         
         char *next_delim = strpbrk(first_delim+1,",");
+	if (!next_delim) {
+		printf("Bad response from the server, did not contain the 2nd required field. Response len %ld\n", responseLen);
+		return CARDACTION_NETFAIL;
+	}
         int end_counter = next_delim - first_delim+1;
         strncpy(counterStr, first_delim + 1, end_counter);
         
-        int isExit = strtoull(next_delim+1,NULL,10);
+        unsigned long long isExit = strtoull(next_delim+1,NULL,10);
+	if(errno == ERANGE) {
+		printf("Bad response from the server, value out of range %m\n");
+		return CARDACTION_NETFAIL;
+	}
         *counterState = strtoul(counterStr, NULL, 10);
+	if(errno == ERANGE) {
+		printf("Bad response from the server, value out of range %m\n");
+		return CARDACTION_NETFAIL;
+	}
         *encodedKeyALen = delimLoc;
         if (isExit)
             response = CARDACTION_ALLOWEXIT; 
