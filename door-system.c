@@ -100,10 +100,14 @@ main(int argc, char **argv)
 			
 			tag = NULL;
 			for (int i = 0; tags[i]; i++) {
-				if ((freefare_get_tag_type(tags[i]) == CLASSIC_1K)) {
+				tag = tags[i];
+				if ((freefare_get_tag_type(tag) == CLASSIC_1K)) {
                                     /* State: Card in field */
-					tag = tags[i];
 					res = mifare_classic_connect(tag);
+					if (res != 0) {
+ 						syslog(LOG_ERR, "Failed to connect to tag (%p)", tag);
+						continue;
+					}
 					uid = freefare_get_tag_uid(tag);
 					time_t now = time(NULL);
 					char encodedKey[32];	
