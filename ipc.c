@@ -35,7 +35,7 @@ void send_ipc_message(eventId evt, const char *cardUid) {
     if (cardUid != 0) {
         strncpy(&msg.cardUid[0],cardUid,9);
     } else {
-        msg.cardUid[0] == '\0';
+        msg.cardUid[0] = '\0';
     }
     write(fifo,&msg, sizeof(ipc_message));
     close(fifo);

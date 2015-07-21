@@ -61,7 +61,9 @@ main(int argc, char **argv)
 {
 	openlog(PROCESS_IDENT, LOG_CONS | LOG_PID, LOG_USER);
 	setlogmask(LOG_UPTO(LOG_INFO));
-	connect_to_serial();
+	if(connect_to_serial() == -1) {
+		return -1;
+	}
 
 	int             res;
 	nfc_connstring  devices[8];
@@ -69,7 +71,8 @@ main(int argc, char **argv)
 	printf("About to init NFC\n");
 	nfc_init(&ctx);
 	char           *uid;
-	char lastuid[8];
+	char lastuid[9]; lastuid[sizeof(lastuid)-1] = '\0';
+	
 	printf("Listing NFC devies\n");
 	device_count = nfc_list_devices(ctx, devices, 8);
 	if (device_count <= 0) {
@@ -99,10 +102,14 @@ main(int argc, char **argv)
 			
 			tag = NULL;
 			for (int i = 0; tags[i]; i++) {
-				if ((freefare_get_tag_type(tags[i]) == CLASSIC_1K)) {
+				tag = tags[i];
+				if ((freefare_get_tag_type(tag) == CLASSIC_1K)) {
                                     /* State: Card in field */
-					tag = tags[i];
 					res = mifare_classic_connect(tag);
+					if (res != 0) {
+ 						syslog(LOG_ERR, "Failed to connect to tag (%p)", tag);
+						continue;
+					}
 					uid = freefare_get_tag_uid(tag);
 					time_t now = time(NULL);
 					char encodedKey[32];	
@@ -169,6 +176,7 @@ main(int argc, char **argv)
 						writeToAuditLog(uid, access,0);
 						has_invalid_card();
 					} 
+					strncpy(lastuid,uid,8);
 					free(uid);
 					res = mifare_classic_disconnect(tag);
 					//memset(decodedKey,0,6);
@@ -176,7 +184,6 @@ main(int argc, char **argv)
 						syslog(LOG_ERR,"Failed to disconnect from tag");
 						//printf("Failed to disconnect from tag\n");
 					}
-					strncpy(lastuid,uid,8);
 					//memset(encodedKey,0,32);
 					//memset(decodedKey,0,6);
 					lastAction = now;

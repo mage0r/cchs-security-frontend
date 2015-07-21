@@ -22,12 +22,18 @@ memset(&tio,0,sizeof(tio));
         tio.c_cc[VMIN]=1;
         tio.c_cc[VTIME]=5;
  
-        tty_fd=open(SERIALPORT, O_RDWR | O_NONBLOCK);   
+        tty_fd=open(SERIALPORT, O_RDWR | O_NONBLOCK);
+	if (tty_fd == -1) {
+		fprintf(stderr, "Can't open serial port %s : %m\n", SERIALPORT);
+		return -1;
+	}
 	printf("tty_fd %d\n",tty_fd);   
         cfsetospeed(&tio,B9600);            // 9600
         cfsetispeed(&tio,B9600);            // 9600
  
         tcsetattr(tty_fd,TCSANOW,&tio);
+
+	return 0;
 }
 
 void has_valid_card() {
